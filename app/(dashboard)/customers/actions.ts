@@ -146,7 +146,7 @@ export async function createCustomer(data: CustomerFormData) {
     return { success: true, data: customer };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: 'Dữ liệu không hợp lệ', details: error.errors };
+      return { success: false, error: 'Dữ liệu không hợp lệ', details: error.issues };
     }
     console.error('Create customer error:', error);
     return { success: false, error: 'Không thể tạo khách hàng' };
@@ -195,7 +195,7 @@ export async function updateCustomer(id: string, data: CustomerFormData) {
     return { success: true, data: customer };
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return { success: false, error: 'Dữ liệu không hợp lệ', details: error.errors };
+      return { success: false, error: 'Dữ liệu không hợp lệ', details: error.issues };
     }
     console.error('Update customer error:', error);
     return { success: false, error: 'Không thể cập nhật khách hàng' };
