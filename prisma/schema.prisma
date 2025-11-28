@@ -1,0 +1,360 @@
+// Prisma schema for Phuc Loi Cement Distribution Management System
+// Database: PostgreSQL on Railway
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Authentication & User Management
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  name          String
+  role          UserRole  @default(VIEWER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  activities    Activity[]
+  sessions      Session[]
+  accounts      Account[]
+}
+
+enum UserRole {
+  OWNER
+  ACCOUNTANT
+  SALES
+  VIEWER
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// Customer Management
+// ============================================
+
+model Customer {
+  id            String       @id @default(cuid())
+  companyName   String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  taxCode       String?
+  customerType  CustomerType @default(MIXING_STATION)
+  creditLimit   Decimal      @default(0) @db.Decimal(18, 0)
+  paymentTerms  Int          @default(30) // days
+  notes         String?      @db.Text
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relations
+  sales         Sale[]
+  receivables   Receivable[]
+  interactions  Interaction[]
+}
+
+enum CustomerType {
+  MIXING_STATION  // Tram tron be tong
+  RESELLER        // Dai ly
+  PROJECT         // Du an
+  OTHER           // Khac
+}
+
+// ============================================
+// Supplier Management
+// ============================================
+
+model Supplier {
+  id            String   @id @default(cuid())
+  companyName   String
+  contactPerson String?
+  phone         String?
+  email         String?
+  address       String?
+  taxCode       String?
+  cementBrands  String[] // Array of cement brands
+  paymentTerms  String?
+  notes         String?  @db.Text
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  purchases     Purchase[]
+  payables      Payable[]
+}
+
+// ============================================
+// Cement Types
+// ============================================
+
+model CementType {
+  id          String   @id @default(cuid())
+  code        String   @unique  // PCB30, PCB40, PC50, etc.
+  name        String            // Full name
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  // Relations
+  purchases   Purchase[]
+  sales       Sale[]
+}
+
+// ============================================
+// Inventory - Purchases (Nhap hang)
+// ============================================
+
+model Purchase {
+  id            String        @id @default(cuid())
+  purchaseDate  DateTime
+  supplier      Supplier      @relation(fields: [supplierId], references: [id])
+  supplierId    String
+  cementType    CementType    @relation(fields: [cementTypeId], references: [id])
+  cementTypeId  String
+  quantity      Decimal       @db.Decimal(12, 2) // in tons
+  unitPrice     Decimal       @db.Decimal(18, 0) // per ton (VND)
+  totalAmount   Decimal       @db.Decimal(18, 0)
+  hasInvoice    Boolean       @default(false)
+  invoiceNumber String?
+  paymentStatus PaymentStatus @default(UNPAID)
+  truckNumber   String?       // Bien so xe
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  expenses      SpecialExpense[]
+}
+
+// ============================================
+// Inventory - Sales (Xuat hang)
+// ============================================
+
+model Sale {
+  id              String        @id @default(cuid())
+  saleDate        DateTime
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  customerId      String
+  cementType      CementType    @relation(fields: [cementTypeId], references: [id])
+  cementTypeId    String
+  quantity        Decimal       @db.Decimal(12, 2) // in tons
+  unitPrice       Decimal       @db.Decimal(18, 0) // per ton (VND)
+  totalAmount     Decimal       @db.Decimal(18, 0)
+  hasInvoice      Boolean       @default(false)
+  invoiceNumber   String?
+  paymentStatus   PaymentStatus @default(UNPAID)
+  deliveryAddress String?
+  truckNumber     String?       // Bien so xe
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  expenses        SpecialExpense[]
+}
+
+enum PaymentStatus {
+  PAID
+  PARTIAL
+  UNPAID
+}
+
+// ============================================
+// Debt Management - Receivables (Cong no phai thu)
+// ============================================
+
+model Receivable {
+  id              String     @id @default(cuid())
+  customer        Customer   @relation(fields: [customerId], references: [id])
+  customerId      String
+  invoiceNumber   String?
+  transactionDate DateTime
+  dueDate         DateTime
+  originalAmount  Decimal    @db.Decimal(18, 0)
+  paidAmount      Decimal    @default(0) @db.Decimal(18, 0)
+  remainingAmount Decimal    @db.Decimal(18, 0)
+  status          DebtStatus @default(CURRENT)
+  notes           String?    @db.Text
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  payments        Payment[]
+}
+
+// ============================================
+// Debt Management - Payables (Cong no phai tra)
+// ============================================
+
+model Payable {
+  id              String     @id @default(cuid())
+  supplier        Supplier   @relation(fields: [supplierId], references: [id])
+  supplierId      String
+  invoiceNumber   String?
+  transactionDate DateTime
+  dueDate         DateTime
+  originalAmount  Decimal    @db.Decimal(18, 0)
+  paidAmount      Decimal    @default(0) @db.Decimal(18, 0)
+  remainingAmount Decimal    @db.Decimal(18, 0)
+  status          DebtStatus @default(CURRENT)
+  notes           String?    @db.Text
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  payments        Payment[]
+}
+
+enum DebtStatus {
+  CURRENT
+  OVERDUE
+  PAID
+}
+
+// ============================================
+// Payment Records
+// ============================================
+
+model Payment {
+  id            String        @id @default(cuid())
+  paymentDate   DateTime
+  amount        Decimal       @db.Decimal(18, 0)
+  paymentMethod PaymentMethod
+  reference     String?       // Bank transfer reference
+  receivable    Receivable?   @relation(fields: [receivableId], references: [id])
+  receivableId  String?
+  payable       Payable?      @relation(fields: [payableId], references: [id])
+  payableId     String?
+  notes         String?       @db.Text
+  createdAt     DateTime      @default(now())
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  OTHER
+}
+
+// ============================================
+// Special Expenses (Chi phi doc duong - Owner only)
+// ============================================
+
+model SpecialExpense {
+  id          String          @id @default(cuid())
+  expenseDate DateTime
+  category    ExpenseCategory
+  amount      Decimal         @db.Decimal(18, 0)
+  description String?
+  purchase    Purchase?       @relation(fields: [purchaseId], references: [id])
+  purchaseId  String?
+  sale        Sale?           @relation(fields: [saleId], references: [id])
+  saleId      String?
+  notes       String?         @db.Text
+  createdAt   DateTime        @default(now())
+}
+
+enum ExpenseCategory {
+  ROAD_FEE      // Phi duong
+  FACILITATION  // Chi phi tao dieu kien
+  OTHER         // Khac
+}
+
+// ============================================
+// Customer Interactions
+// ============================================
+
+model Interaction {
+  id              String          @id @default(cuid())
+  customer        Customer        @relation(fields: [customerId], references: [id])
+  customerId      String
+  interactionDate DateTime
+  type            InteractionType
+  content         String          @db.Text
+  createdAt       DateTime        @default(now())
+}
+
+enum InteractionType {
+  CALL
+  MEETING
+  EMAIL
+  NOTE
+}
+
+// ============================================
+// Activity Log (Audit Trail)
+// ============================================
+
+model Activity {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  action    String   // CREATE, UPDATE, DELETE
+  entity    String   // Customer, Sale, Purchase, etc.
+  entityId  String?
+  details   Json?    // Additional details
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+// ============================================
+// AI Chat History
+// ============================================
+
+model ChatHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String   @db.Text
+  response  String   @db.Text
+  metadata  Json?    // Query metadata, performance, etc.
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
