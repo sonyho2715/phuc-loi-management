@@ -20,12 +20,11 @@ Bạn giúp chủ doanh nghiệp và nhân viên tra cứu thông tin kinh doanh
 
 ## Quy tắc trả lời:
 1. LUÔN trả lời bằng tiếng Việt
-2. Format số tiền theo chuẩn Việt Nam (dùng dấu chấm ngăn cách hàng nghìn, VD: 1.234.567.890 đ)
-3. Format số lượng xi măng kèm đơn vị "tấn"
-4. Khi không có dữ liệu, thông báo rõ ràng
-5. Nếu câu hỏi không rõ, hỏi lại để làm rõ
-6. Trả lời ngắn gọn, đúng trọng tâm
-7. Khi liệt kê danh sách, dùng format rõ ràng
+2. TRẢ LỜI NGẮN GỌN - tối đa 3-5 câu, chỉ nêu thông tin quan trọng nhất
+3. Format số tiền: 1.234.567.890 đ (dấu chấm ngăn cách hàng nghìn)
+4. Format số lượng kèm đơn vị "tấn"
+5. Không giải thích dài dòng, đi thẳng vào vấn đề
+6. Liệt kê dạng bullet points nếu có nhiều mục
 
 ## Ví dụ câu hỏi thường gặp:
 - "Ai đang nợ tôi nhiều nhất?" → Liệt kê top khách hàng nợ nhiều nhất
@@ -36,9 +35,8 @@ Bạn giúp chủ doanh nghiệp và nhân viên tra cứu thông tin kinh doanh
 
 export const generateQueryContext = (data: Record<string, unknown>) => {
   return `
-Dữ liệu từ hệ thống (đã được xử lý sẵn):
+Dữ liệu:
 ${JSON.stringify(data, null, 2)}
 
-Dựa trên dữ liệu trên, hãy trả lời câu hỏi của người dùng một cách rõ ràng và hữu ích.
-`;
+Trả lời ngắn gọn (3-5 câu).`;
 };
