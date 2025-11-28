@@ -8,10 +8,10 @@ export const customerSchema = z.object({
   address: z.string().max(500).optional().nullable(),
   taxCode: z.string().max(20).optional().nullable(),
   customerType: z.enum(['MIXING_STATION', 'RESELLER', 'PROJECT', 'OTHER']),
-  creditLimit: z.coerce.number().min(0, 'Hạn mức phải >= 0').default(0),
-  paymentTerms: z.coerce.number().min(0).max(365).default(30),
+  creditLimit: z.coerce.number().min(0, 'Hạn mức phải >= 0'),
+  paymentTerms: z.coerce.number().min(0).max(365),
   notes: z.string().max(1000).optional().nullable(),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 export type CustomerFormData = z.infer<typeof customerSchema>;
