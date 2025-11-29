@@ -22,6 +22,7 @@ async function getSales() {
     include: {
       customer: { select: { companyName: true } },
       cementType: { select: { code: true, name: true } },
+      vehicle: { select: { plateNumber: true } },
     },
   });
 }
@@ -164,7 +165,7 @@ export default async function SalesPage() {
                   <TableCell className="text-right">{Number(sale.quantity).toLocaleString('vi-VN')}</TableCell>
                   <TableCell className="text-right">{formatCurrency(Number(sale.unitPrice))}</TableCell>
                   <TableCell className="text-right font-medium">{formatCurrency(Number(sale.totalAmount))}</TableCell>
-                  <TableCell>{sale.truckNumber || '-'}</TableCell>
+                  <TableCell>{sale.vehicle?.plateNumber || '-'}</TableCell>
                   <TableCell>{getStatusBadge(sale.paymentStatus)}</TableCell>
                 </TableRow>
               ))}

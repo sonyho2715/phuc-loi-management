@@ -402,9 +402,9 @@ export async function processQuery(query: string): Promise<QueryResult> {
 
     default: {
       // For general queries, provide summary data
-      const [customersCount, suppliersCount, receivables, payables, monthlySales] = await Promise.all([
+      const [customersCount, factoriesCount, receivables, payables, monthlySales] = await Promise.all([
         db.customer.count({ where: { isActive: true } }),
-        db.supplier.count({ where: { isActive: true } }),
+        db.factory.count({ where: { isActive: true } }),
         db.receivable.aggregate({ where: { status: { not: 'PAID' } }, _sum: { remainingAmount: true } }),
         db.payable.aggregate({ where: { status: { not: 'PAID' } }, _sum: { remainingAmount: true } }),
         db.sale.aggregate({ where: { saleDate: { gte: startOfMonth } }, _sum: { totalAmount: true, quantity: true } }),
@@ -415,7 +415,7 @@ export async function processQuery(query: string): Promise<QueryResult> {
         data: {
           summary: {
             customers: customersCount,
-            suppliers: suppliersCount,
+            factories: factoriesCount,
             totalReceivables: Number(receivables._sum.remainingAmount || 0),
             totalPayables: Number(payables._sum.remainingAmount || 0),
             monthlyRevenue: Number(monthlySales._sum.totalAmount || 0),

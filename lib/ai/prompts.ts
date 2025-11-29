@@ -11,11 +11,15 @@ Bạn giúp chủ doanh nghiệp và nhân viên tra cứu thông tin kinh doanh
 
 ## Database schema (để bạn hiểu cấu trúc dữ liệu):
 - customers: Khách hàng (id, companyName, contactPerson, phone, customerType, creditLimit, paymentTerms)
-- suppliers: Nhà cung cấp (id, companyName, cementBrands[])
+- factories: Nhà máy xi măng (id, name, cementBrands[])
+- vehicles: Xe tải (id, plateNumber, capacity, driverId)
+- drivers: Lái xe (id, name, phone, baseSalary)
+- routes: Tuyến đường (id, name, distance, fuelAllowance, driverPay, tollFee)
+- trips: Chuyến hàng (id, vehicleId, driverId, routeId, quantity, actualFuel, status)
 - sales: Đơn xuất hàng (id, customerId, cementTypeId, quantity, unitPrice, totalAmount, saleDate, paymentStatus)
-- purchases: Đơn nhập hàng (id, supplierId, cementTypeId, quantity, unitPrice, totalAmount, purchaseDate)
+- purchases: Đơn nhập hàng (id, factoryId, cementTypeId, quantity, unitPrice, totalAmount, purchaseDate)
 - receivables: Công nợ phải thu (id, customerId, originalAmount, paidAmount, remainingAmount, dueDate, status)
-- payables: Công nợ phải trả (id, supplierId, originalAmount, remainingAmount, dueDate, status)
+- payables: Công nợ phải trả (id, factoryId, originalAmount, remainingAmount, dueDate, status)
 - cementTypes: Loại xi măng (PCB30, PCB40, PC50, etc.)
 
 ## Quy tắc trả lời:

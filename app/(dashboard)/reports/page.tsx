@@ -25,7 +25,7 @@ async function getReportStats() {
     yearlySales,
     yearlyPurchases,
     totalCustomers,
-    totalSuppliers,
+    totalFactories,
     receivables,
     payables,
   ] = await Promise.all([
@@ -48,7 +48,7 @@ async function getReportStats() {
       _sum: { totalAmount: true },
     }),
     db.customer.count({ where: { isActive: true } }),
-    db.supplier.count({ where: { isActive: true } }),
+    db.factory.count({ where: { isActive: true } }),
     db.receivable.aggregate({
       where: { status: { not: 'PAID' } },
       _sum: { remainingAmount: true },
@@ -69,7 +69,7 @@ async function getReportStats() {
     yearlySalesAmount: Number(yearlySales._sum.totalAmount || 0),
     yearlyPurchasesAmount: Number(yearlyPurchases._sum.totalAmount || 0),
     totalCustomers,
-    totalSuppliers,
+    totalFactories,
     totalReceivables: Number(receivables._sum.remainingAmount || 0),
     totalPayables: Number(payables._sum.remainingAmount || 0),
   };
@@ -123,8 +123,8 @@ export default async function ReportsPage() {
       bgColor: 'bg-purple-100',
     },
     {
-      title: 'Báo cáo nhà cung cấp',
-      description: 'Phân tích nhà cung cấp theo giá trị',
+      title: 'Báo cáo nhà máy',
+      description: 'Phân tích nhà máy xi măng theo giá trị',
       icon: Building,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
@@ -255,7 +255,7 @@ export default async function ReportsPage() {
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">Đối tác</p>
               <p className="text-xl font-bold">
-                {stats.totalCustomers} KH / {stats.totalSuppliers} NCC
+                {stats.totalCustomers} KH / {stats.totalFactories} NM
               </p>
             </div>
           </div>

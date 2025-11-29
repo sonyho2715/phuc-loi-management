@@ -29,11 +29,11 @@ async function getDebtData() {
     orderBy: { dueDate: 'asc' },
   });
 
-  // Get all payables with supplier info
+  // Get all payables with factory info
   const payables = await db.payable.findMany({
     where: { status: { not: 'PAID' } },
     include: {
-      supplier: { select: { companyName: true, phone: true } },
+      factory: { select: { name: true, phone: true } },
     },
     orderBy: { dueDate: 'asc' },
   });
@@ -296,7 +296,7 @@ async function DebtContent() {
           <Card>
             <CardHeader>
               <CardTitle>Công nợ phải trả</CardTitle>
-              <CardDescription>Danh sách các khoản nợ nhà cung cấp</CardDescription>
+              <CardDescription>Danh sách các khoản nợ nhà máy xi măng</CardDescription>
             </CardHeader>
             <CardContent>
               {data.payables.length === 0 ? (
@@ -307,7 +307,7 @@ async function DebtContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nhà cung cấp</TableHead>
+                      <TableHead>Nhà máy</TableHead>
                       <TableHead>Ngày giao dịch</TableHead>
                       <TableHead>Đến hạn</TableHead>
                       <TableHead className="text-right">Số tiền gốc</TableHead>
@@ -320,9 +320,9 @@ async function DebtContent() {
                       <TableRow key={debt.id}>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{debt.supplier.companyName}</p>
-                            {debt.supplier.phone && (
-                              <p className="text-xs text-muted-foreground">{debt.supplier.phone}</p>
+                            <p className="font-medium">{debt.factory.name}</p>
+                            {debt.factory.phone && (
+                              <p className="text-xs text-muted-foreground">{debt.factory.phone}</p>
                             )}
                           </div>
                         </TableCell>

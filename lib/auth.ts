@@ -89,8 +89,9 @@ export function hasRole(userRole: UserRole, requiredRoles: UserRole[]): boolean 
 
 // Role hierarchy for permission checks
 export const roleHierarchy: Record<UserRole, number> = {
-  OWNER: 4,
-  ACCOUNTANT: 3,
+  OWNER: 5,
+  ACCOUNTANT: 4,
+  DISPATCHER: 3,
   SALES: 2,
   VIEWER: 1,
 };

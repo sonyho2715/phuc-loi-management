@@ -28,7 +28,7 @@ async function getDashboardData() {
   // Get totals
   const [
     totalCustomers,
-    totalSuppliers,
+    totalFactories,
     totalReceivables,
     totalPayables,
     monthlySales,
@@ -43,8 +43,8 @@ async function getDashboardData() {
     // Total active customers
     db.customer.count({ where: { isActive: true } }),
 
-    // Total active suppliers
-    db.supplier.count({ where: { isActive: true } }),
+    // Total active factories
+    db.factory.count({ where: { isActive: true } }),
 
     // Total receivables (outstanding)
     db.receivable.aggregate({
@@ -164,7 +164,7 @@ async function getDashboardData() {
 
   return {
     totalCustomers,
-    totalSuppliers,
+    totalFactories,
     totalReceivables: Number(totalReceivables._sum.remainingAmount || 0),
     totalPayables: Number(totalPayables._sum.remainingAmount || 0),
     monthlyRevenue: currentRevenue,
@@ -282,7 +282,7 @@ async function DashboardContent() {
         <StatCard
           title="Khách hàng"
           value={data.totalCustomers.toString()}
-          description={`${data.totalSuppliers} nhà cung cấp`}
+          description={`${data.totalFactories} nhà máy`}
           icon={Users}
         />
       </div>

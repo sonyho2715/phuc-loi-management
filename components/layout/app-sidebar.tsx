@@ -26,7 +26,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   LayoutDashboard,
   Users,
-  Building,
+  Factory,
   Package,
   TrendingUp,
   TrendingDown,
@@ -39,6 +39,13 @@ import {
   ChevronUp,
   Truck,
   Wallet,
+  UserCircle,
+  Route,
+  Navigation,
+  Fuel,
+  Target,
+  Bell,
+  Calculator,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,13 +54,24 @@ const menuItems = [
     group: 'Tổng quan',
     items: [
       { title: 'Bảng điều khiển', href: '/', icon: LayoutDashboard },
+      { title: 'Mục tiêu', href: '/goals', icon: Target },
     ],
   },
   {
-    group: 'Khách hàng & Đối tác',
+    group: 'Vận hành',
+    items: [
+      { title: 'Xe cộ', href: '/vehicles', icon: Truck },
+      { title: 'Lái xe', href: '/drivers', icon: UserCircle },
+      { title: 'Tuyến đường', href: '/routes', icon: Route },
+      { title: 'Chuyến hàng', href: '/trips', icon: Navigation },
+      { title: 'Nhiên liệu', href: '/fuel', icon: Fuel },
+    ],
+  },
+  {
+    group: 'Khách hàng & Nhà máy',
     items: [
       { title: 'Khách hàng', href: '/customers', icon: Users },
-      { title: 'Nhà cung cấp', href: '/suppliers', icon: Building },
+      { title: 'Nhà máy xi măng', href: '/factories', icon: Factory },
     ],
   },
   {
@@ -65,17 +83,19 @@ const menuItems = [
     ],
   },
   {
-    group: 'Công nợ',
+    group: 'Công nợ & Lương',
     items: [
       { title: 'Tổng quan công nợ', href: '/debts', icon: Wallet },
       { title: 'Phải thu', href: '/debts/receivables', icon: Receipt },
       { title: 'Phải trả', href: '/debts/payables', icon: CreditCard },
+      { title: 'Bảng lương', href: '/salaries', icon: Calculator },
     ],
   },
   {
     group: 'Công cụ',
     items: [
       { title: 'Trợ lý AI', href: '/ai-assistant', icon: Bot },
+      { title: 'Cảnh báo', href: '/alerts', icon: Bell },
       { title: 'Báo cáo', href: '/reports', icon: FileText },
     ],
   },

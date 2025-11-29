@@ -1,4 +1,5 @@
 // Prisma schema for Phuc Loi Cement Distribution Management System
+// Enhanced version based on business requirements
 // Database: PostgreSQL on Railway
 
 generator client {
@@ -28,13 +29,15 @@ model User {
   activities    Activity[]
   sessions      Session[]
   accounts      Account[]
+  chatHistory   ChatHistory[]
 }
 
 enum UserRole {
-  OWNER
-  ACCOUNTANT
-  SALES
-  VIEWER
+  OWNER       // Chu doanh nghiep - full access
+  ACCOUNTANT  // Ke toan - data entry
+  DISPATCHER  // Dieu do - manage trips
+  SALES       // Ban hang
+  VIEWER      // Xem bao cao
 }
 
 model Account {
@@ -73,20 +76,48 @@ model VerificationToken {
 }
 
 // ============================================
+// Factory Management (Nha may xi mang)
+// ============================================
+
+model Factory {
+  id            String   @id @default(cuid())
+  code          String   @unique  // XUAN_THANH, HOANG_THACH, etc.
+  name          String            // Ten nha may
+  address       String?
+  phone         String?
+  contactPerson String?
+  cementBrands  String[]          // Cac loai xi mang
+  paymentTerms  Int      @default(30)  // So ngay thanh toan
+  notes         String?  @db.Text
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  purchases     Purchase[]
+  payables      Payable[]
+  routes        Route[]
+}
+
+// ============================================
 // Customer Management
 // ============================================
 
 model Customer {
   id            String       @id @default(cuid())
+  code          String?      @unique  // Ma khach hang
   companyName   String
+  shortName     String?               // Ten viet tat
   contactPerson String?
   phone         String?
   email         String?
   address       String?
+  province      String?               // Tinh/TP
   taxCode       String?
   customerType  CustomerType @default(MIXING_STATION)
   creditLimit   Decimal      @default(0) @db.Decimal(18, 0)
   paymentTerms  Int          @default(30) // days
+  riskLevel     RiskLevel    @default(NORMAL)
   notes         String?      @db.Text
   isActive      Boolean      @default(true)
   createdAt     DateTime     @default(now())
@@ -96,6 +127,7 @@ model Customer {
   sales         Sale[]
   receivables   Receivable[]
   interactions  Interaction[]
+  routes        Route[]
 }
 
 enum CustomerType {
@@ -105,28 +137,360 @@ enum CustomerType {
   OTHER           // Khac
 }
 
+enum RiskLevel {
+  LOW       // Khach hang tot, thanh toan dung han
+  NORMAL    // Binh thuong
+  HIGH      // Rui ro cao, can theo doi
+  BLACKLIST // Danh sach den - khong ban
+}
+
 // ============================================
-// Supplier Management
+// Vehicle Management (Quan ly xe)
 // ============================================
 
-model Supplier {
+model Vehicle {
+  id              String        @id @default(cuid())
+  plateNumber     String        @unique  // Bien so xe
+  vehicleType     VehicleType   @default(CEMENT_TRUCK)
+  capacity        Decimal       @db.Decimal(10, 2)  // Trong tai (tan)
+  brand           String?                // Hang xe
+  model           String?                // Doi xe
+  yearMade        Int?                   // Nam san xuat
+  ownerType       OwnerType     @default(COMPANY)
+  status          VehicleStatus @default(ACTIVE)
+  notes           String?       @db.Text
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  driver          Driver?       @relation(fields: [driverId], references: [id])
+  driverId        String?
+  trips           Trip[]
+  fuelTransactions FuelTransaction[]
+  expenses        VehicleExpense[]
+  purchases       Purchase[]
+  sales           Sale[]
+}
+
+enum VehicleType {
+  CEMENT_TRUCK    // Xe bon xi mang
+  DUMP_TRUCK      // Xe ben
+  CONTAINER       // Xe container
+}
+
+enum OwnerType {
+  COMPANY         // Xe cong ty
+  RENTED          // Xe thue ngoai
+}
+
+enum VehicleStatus {
+  ACTIVE          // Dang hoat dong
+  MAINTENANCE     // Dang bao duong
+  BROKEN          // Hong
+  RETIRED         // Da thanh ly
+}
+
+// ============================================
+// Driver Management (Quan ly lai xe)
+// ============================================
+
+model Driver {
+  id              String       @id @default(cuid())
+  code            String       @unique  // Ma lai xe
+  name            String
+  phone           String?
+  idNumber        String?               // CCCD
+  licenseNumber   String?               // Bang lai
+  licenseExpiry   DateTime?             // Han bang lai
+  address         String?
+  bankAccount     String?               // So tai khoan
+  bankName        String?               // Ten ngan hang
+  baseSalary      Decimal      @default(0) @db.Decimal(18, 0)  // Luong co ban
+  status          DriverStatus @default(ACTIVE)
+  hireDate        DateTime?
+  notes           String?      @db.Text
+  isActive        Boolean      @default(true)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  // Relations
+  vehicles        Vehicle[]
+  trips           Trip[]
+  salaries        DriverSalary[]
+  advances        DriverAdvance[]
+}
+
+enum DriverStatus {
+  ACTIVE          // Dang lam viec
+  ON_LEAVE        // Nghi phep
+  TERMINATED      // Da nghi viec
+}
+
+// ============================================
+// Route Management (Quan ly tuyen duong)
+// ============================================
+
+model Route {
+  id              String   @id @default(cuid())
+  code            String   @unique  // Ma tuyen: XUAN_THANH_TO_HUNG_PHAT
+  name            String            // Ten tuyen
+
+  // Diem di
+  fromType        RoutePointType @default(FACTORY)
+  factory         Factory?  @relation(fields: [factoryId], references: [id])
+  factoryId       String?
+  fromAddress     String?
+
+  // Diem den
+  toType          RoutePointType @default(CUSTOMER)
+  customer        Customer? @relation(fields: [customerId], references: [id])
+  customerId      String?
+  toAddress       String?
+
+  // Dinh muc chi phi
+  distance        Decimal?  @db.Decimal(10, 2)  // Khoang cach (km)
+  fuelAllowance   Decimal   @db.Decimal(10, 2)  // Dinh muc dau (lit)
+  driverPay       Decimal   @db.Decimal(18, 0)  // Tien cong lai xe (VND)
+  mealAllowance   Decimal   @default(0) @db.Decimal(18, 0)  // Tien an
+  tollFee         Decimal   @default(0) @db.Decimal(18, 0)  // Phi duong
+  otherCost       Decimal   @default(0) @db.Decimal(18, 0)  // Chi phi khac
+
+  estimatedTime   Int?               // Thoi gian du kien (phut)
+  notes           String?   @db.Text
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  trips           Trip[]
+}
+
+enum RoutePointType {
+  FACTORY   // Nha may
+  CUSTOMER  // Khach hang
+  WAREHOUSE // Kho
+  OTHER     // Khac
+}
+
+// ============================================
+// Trip Management (Quan ly chuyen hang)
+// ============================================
+
+model Trip {
+  id              String      @id @default(cuid())
+  tripCode        String      @unique  // Ma chuyen: TRIP-20240115-001
+  tripDate        DateTime
+
+  // Xe va lai xe
+  vehicle         Vehicle     @relation(fields: [vehicleId], references: [id])
+  vehicleId       String
+  driver          Driver      @relation(fields: [driverId], references: [id])
+  driverId        String
+
+  // Tuyen duong
+  route           Route?      @relation(fields: [routeId], references: [id])
+  routeId         String?
+
+  // Thong tin hang
+  cementType      CementType  @relation(fields: [cementTypeId], references: [id])
+  cementTypeId    String
+  quantity        Decimal     @db.Decimal(12, 2)  // So tan
+
+  // Chi phi thuc te
+  actualFuel      Decimal?    @db.Decimal(10, 2)  // Dau thuc te (lit)
+  actualDriverPay Decimal?    @db.Decimal(18, 0)  // Tien cong thuc te
+  actualMeal      Decimal?    @db.Decimal(18, 0)  // Tien an thuc te
+  actualToll      Decimal?    @db.Decimal(18, 0)  // Phi duong thuc te
+  otherExpense    Decimal?    @db.Decimal(18, 0)  // Chi phi phat sinh
+  otherExpenseNote String?                        // Ghi chu chi phi phat sinh
+
+  // Trang thai
+  status          TripStatus  @default(PENDING)
+  departureTime   DateTime?
+  arrivalTime     DateTime?
+
+  // Phieu giao hang
+  deliveryNote    String?              // So phieu giao hang
+  receiverName    String?              // Nguoi nhan
+  receiverSign    Boolean   @default(false)  // Da ky nhan
+  photoUrl        String?              // Link anh phieu
+
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  purchase        Purchase?   @relation(fields: [purchaseId], references: [id])
+  purchaseId      String?
+  sale            Sale?       @relation(fields: [saleId], references: [id])
+  saleId          String?
+  fuelTransactions FuelTransaction[]
+}
+
+enum TripStatus {
+  PENDING     // Cho xuat phat
+  IN_TRANSIT  // Dang chay
+  DELIVERED   // Da giao
+  CANCELLED   // Da huy
+}
+
+// ============================================
+// Fuel Station Management (Quan ly cay dau)
+// ============================================
+
+model FuelStation {
   id            String   @id @default(cuid())
-  companyName   String
-  contactPerson String?
-  phone         String?
-  email         String?
+  code          String   @unique  // Ma cay dau
+  name          String
   address       String?
-  taxCode       String?
-  cementBrands  String[] // Array of cement brands
-  paymentTerms  String?
+  phone         String?
+  contactPerson String?
   notes         String?  @db.Text
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   // Relations
-  purchases     Purchase[]
-  payables      Payable[]
+  transactions  FuelTransaction[]
+}
+
+// ============================================
+// Fuel Transaction (Giao dich do dau)
+// ============================================
+
+model FuelTransaction {
+  id              String      @id @default(cuid())
+  transactionDate DateTime
+
+  vehicle         Vehicle     @relation(fields: [vehicleId], references: [id])
+  vehicleId       String
+
+  fuelStation     FuelStation @relation(fields: [fuelStationId], references: [id])
+  fuelStationId   String
+
+  trip            Trip?       @relation(fields: [tripId], references: [id])
+  tripId          String?
+
+  liters          Decimal     @db.Decimal(10, 2)   // So lit
+  pricePerLiter   Decimal?    @db.Decimal(18, 0)   // Gia moi lit
+  totalAmount     Decimal     @db.Decimal(18, 0)   // Tong tien
+
+  isWithinLimit   Boolean     @default(true)       // Trong dinh muc?
+  overLimit       Decimal?    @db.Decimal(10, 2)   // Vuot dinh muc (lit)
+
+  paymentMethod   FuelPaymentMethod @default(COMPANY_ACCOUNT)
+  reference       String?            // So phieu/hoa don
+  notes           String?     @db.Text
+  createdAt       DateTime    @default(now())
+}
+
+enum FuelPaymentMethod {
+  COMPANY_ACCOUNT  // Ky so cong ty
+  CASH             // Tien mat
+  DRIVER_ADVANCE   // Ung truoc lai xe
+}
+
+// ============================================
+// Vehicle Expense (Chi phi sua chua xe)
+// ============================================
+
+model VehicleExpense {
+  id              String       @id @default(cuid())
+  expenseDate     DateTime
+  vehicle         Vehicle      @relation(fields: [vehicleId], references: [id])
+  vehicleId       String
+
+  category        VehicleExpenseCategory
+  description     String
+  amount          Decimal      @db.Decimal(18, 0)
+  vendor          String?               // Noi sua chua
+  invoiceNumber   String?
+  notes           String?      @db.Text
+  createdAt       DateTime     @default(now())
+}
+
+enum VehicleExpenseCategory {
+  TIRE            // Lop xe
+  OIL             // Dau nhot
+  BRAKE           // Thang, phanh
+  ENGINE          // Dong co
+  BODY            // Than xe
+  ELECTRIC        // Dien
+  INSPECTION      // Dang kiem
+  INSURANCE       // Bao hiem
+  OTHER           // Khac
+}
+
+// ============================================
+// Driver Salary (Bang luong lai xe)
+// ============================================
+
+model DriverSalary {
+  id              String   @id @default(cuid())
+  driver          Driver   @relation(fields: [driverId], references: [id])
+  driverId        String
+
+  month           Int               // Thang
+  year            Int               // Nam
+
+  // Khoan thu nhap
+  baseSalary      Decimal  @db.Decimal(18, 0)  // Luong co ban
+  tripBonus       Decimal  @default(0) @db.Decimal(18, 0)  // Tien chuyen
+  mealAllowance   Decimal  @default(0) @db.Decimal(18, 0)  // Tien an
+  otherBonus      Decimal  @default(0) @db.Decimal(18, 0)  // Thuong khac
+
+  // Khoan giam tru
+  fuelOverage     Decimal  @default(0) @db.Decimal(18, 0)  // Vuot dinh muc dau
+  advances        Decimal  @default(0) @db.Decimal(18, 0)  // Da ung truoc
+  penalties       Decimal  @default(0) @db.Decimal(18, 0)  // Phat
+  otherDeduction  Decimal  @default(0) @db.Decimal(18, 0)  // Giam tru khac
+
+  // Tong ket
+  grossSalary     Decimal  @db.Decimal(18, 0)  // Tong thu nhap
+  netSalary       Decimal  @db.Decimal(18, 0)  // Thuc nhan
+
+  tripCount       Int      @default(0)         // So chuyen da chay
+  status          SalaryStatus @default(DRAFT)
+  paidDate        DateTime?
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([driverId, month, year])
+}
+
+enum SalaryStatus {
+  DRAFT           // Nhap
+  CONFIRMED       // Da xac nhan
+  PAID            // Da thanh toan
+}
+
+// ============================================
+// Driver Advance (Ung luong lai xe)
+// ============================================
+
+model DriverAdvance {
+  id            String   @id @default(cuid())
+  driver        Driver   @relation(fields: [driverId], references: [id])
+  driverId      String
+  advanceDate   DateTime
+  amount        Decimal  @db.Decimal(18, 0)
+  reason        String?
+  status        AdvanceStatus @default(PENDING)
+  approvedBy    String?
+  approvedDate  DateTime?
+  settledInMonth Int?     // Tru vao thang
+  settledInYear  Int?     // Tru vao nam
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+}
+
+enum AdvanceStatus {
+  PENDING   // Cho duyet
+  APPROVED  // Da duyet
+  REJECTED  // Tu choi
+  SETTLED   // Da tru luong
 }
 
 // ============================================
@@ -144,6 +508,7 @@ model CementType {
   // Relations
   purchases   Purchase[]
   sales       Sale[]
+  trips       Trip[]
 }
 
 // ============================================
@@ -152,23 +517,33 @@ model CementType {
 
 model Purchase {
   id            String        @id @default(cuid())
+  purchaseCode  String        @unique  // Ma phieu nhap
   purchaseDate  DateTime
-  supplier      Supplier      @relation(fields: [supplierId], references: [id])
-  supplierId    String
+
+  factory       Factory       @relation(fields: [factoryId], references: [id])
+  factoryId     String
+
   cementType    CementType    @relation(fields: [cementTypeId], references: [id])
   cementTypeId  String
+
   quantity      Decimal       @db.Decimal(12, 2) // in tons
   unitPrice     Decimal       @db.Decimal(18, 0) // per ton (VND)
   totalAmount   Decimal       @db.Decimal(18, 0)
+
+  // Thong tin giao hang
+  vehicle       Vehicle?      @relation(fields: [vehicleId], references: [id])
+  vehicleId     String?
+
   hasInvoice    Boolean       @default(false)
   invoiceNumber String?
   paymentStatus PaymentStatus @default(UNPAID)
-  truckNumber   String?       // Bien so xe
+
   notes         String?       @db.Text
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
   // Relations
+  trips         Trip[]
   expenses      SpecialExpense[]
 }
 
@@ -178,24 +553,34 @@ model Purchase {
 
 model Sale {
   id              String        @id @default(cuid())
+  saleCode        String        @unique  // Ma phieu xuat
   saleDate        DateTime
+
   customer        Customer      @relation(fields: [customerId], references: [id])
   customerId      String
+
   cementType      CementType    @relation(fields: [cementTypeId], references: [id])
   cementTypeId    String
+
   quantity        Decimal       @db.Decimal(12, 2) // in tons
   unitPrice       Decimal       @db.Decimal(18, 0) // per ton (VND)
   totalAmount     Decimal       @db.Decimal(18, 0)
+
+  // Thong tin giao hang
+  vehicle         Vehicle?      @relation(fields: [vehicleId], references: [id])
+  vehicleId       String?
+  deliveryAddress String?
+
   hasInvoice      Boolean       @default(false)
   invoiceNumber   String?
   paymentStatus   PaymentStatus @default(UNPAID)
-  deliveryAddress String?
-  truckNumber     String?       // Bien so xe
+
   notes           String?       @db.Text
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   // Relations
+  trips           Trip[]
   expenses        SpecialExpense[]
 }
 
@@ -234,8 +619,8 @@ model Receivable {
 
 model Payable {
   id              String     @id @default(cuid())
-  supplier        Supplier   @relation(fields: [supplierId], references: [id])
-  supplierId      String
+  factory         Factory    @relation(fields: [factoryId], references: [id])
+  factoryId       String
   invoiceNumber   String?
   transactionDate DateTime
   dueDate         DateTime
@@ -327,6 +712,173 @@ enum InteractionType {
 }
 
 // ============================================
+// Business Goals (Muc tieu kinh doanh)
+// ============================================
+
+model BusinessGoal {
+  id              String   @id @default(cuid())
+  year            Int
+
+  // Muc tieu doanh thu
+  revenueTarget   Decimal  @db.Decimal(18, 0)  // 500 ty
+  revenueActual   Decimal  @default(0) @db.Decimal(18, 0)
+
+  // Muc tieu san luong (tan)
+  volumeTarget    Decimal? @db.Decimal(12, 2)
+  volumeActual    Decimal  @default(0) @db.Decimal(12, 2)
+
+  // Muc tieu khach hang moi
+  newCustomerTarget Int?
+  newCustomerActual Int     @default(0)
+
+  // Muc tieu so chuyen
+  tripTarget      Int?
+  tripActual      Int      @default(0)
+
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([year])
+}
+
+// ============================================
+// Monthly Summary (Tong ket thang)
+// ============================================
+
+model MonthlySummary {
+  id              String   @id @default(cuid())
+  month           Int
+  year            Int
+
+  // Doanh thu
+  totalRevenue    Decimal  @db.Decimal(18, 0)
+  totalCost       Decimal  @db.Decimal(18, 0)
+  grossProfit     Decimal  @db.Decimal(18, 0)
+
+  // San luong
+  totalPurchased  Decimal  @db.Decimal(12, 2)  // Tong nhap (tan)
+  totalSold       Decimal  @db.Decimal(12, 2)  // Tong xuat (tan)
+
+  // Van hanh
+  totalTrips      Int
+  totalFuel       Decimal  @db.Decimal(12, 2)  // Tong dau (lit)
+  totalDriverPay  Decimal  @db.Decimal(18, 0)  // Tong luong lai xe
+  totalVehicleCost Decimal @db.Decimal(18, 0)  // Tong chi phi xe
+
+  // Cong no
+  totalReceivable Decimal  @db.Decimal(18, 0)  // Phai thu
+  totalPayable    Decimal  @db.Decimal(18, 0)  // Phai tra
+
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([month, year])
+}
+
+// ============================================
+// Training Records (Quy trinh PAI - Dao tao)
+// ============================================
+
+model TrainingRecord {
+  id              String   @id @default(cuid())
+  title           String            // Ten buoi/du an
+  recordDate      DateTime
+  recordType      TrainingType
+
+  // Cot 1: Chuan bi
+  preparation     String?  @db.Text  // Da chuan bi gi
+  prepGood        String?  @db.Text  // Chuan bi tot
+  prepImprove     String?  @db.Text  // Can cai thien
+
+  // Cot 2: Thuc thi
+  execution       String?  @db.Text  // Da thuc hien gi
+  execGood        String?  @db.Text  // Thuc hien tot
+  execImprove     String?  @db.Text  // Can cai thien
+
+  // Cot 3: Bai hoc
+  lessonsLearned  String?  @db.Text  // Bai hoc rut ra
+  nextActions     String?  @db.Text  // Hanh dong tiep theo
+
+  employeeName    String?           // Ten nhan vien
+  customerName    String?           // Ten khach hang (neu lien quan)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum TrainingType {
+  CUSTOMER_VISIT  // Ghe tham khach hang
+  SALES_CALL      // Goi ban hang
+  DELIVERY        // Giao hang
+  MEETING         // Hop
+  OTHER           // Khac
+}
+
+// ============================================
+// Market Research (Nghien cuu thi truong)
+// ============================================
+
+model MarketResearch {
+  id              String   @id @default(cuid())
+  province        String            // Tinh/TP
+
+  // So lieu thi truong
+  totalStations   Int?              // Tong so tram tron
+  activeStations  Int?              // Tram dang hoat dong
+  potentialValue  Decimal? @db.Decimal(18, 0)  // Gia tri tiem nang
+
+  // Doi thu
+  competitors     String?  @db.Text  // Danh sach doi thu
+  marketShare     Decimal? @db.Decimal(5, 2)  // Thi phan (%)
+
+  // Phan tich
+  opportunities   String?  @db.Text  // Co hoi
+  threats         String?  @db.Text  // Thach thuc
+
+  lastUpdated     DateTime @default(now())
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([province])
+}
+
+// ============================================
+// Email Marketing Campaign
+// ============================================
+
+model EmailCampaign {
+  id              String   @id @default(cuid())
+  name            String
+  subject         String
+  content         String   @db.Text
+  targetProvince  String?           // Tinh muc tieu
+  targetType      CustomerType?     // Loai khach hang
+
+  scheduledDate   DateTime?
+  sentDate        DateTime?
+
+  totalSent       Int      @default(0)
+  totalOpened     Int      @default(0)
+  totalClicked    Int      @default(0)
+  totalReplied    Int      @default(0)
+
+  status          CampaignStatus @default(DRAFT)
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  COMPLETED
+}
+
+// ============================================
 // Activity Log (Audit Trail)
 // ============================================
 
@@ -350,6 +902,7 @@ model Activity {
 
 model ChatHistory {
   id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
   userId    String
   query     String   @db.Text
   response  String   @db.Text
@@ -357,4 +910,43 @@ model ChatHistory {
   createdAt DateTime @default(now())
 
   @@index([userId, createdAt])
+}
+
+// ============================================
+// Alerts & Notifications
+// ============================================
+
+model Alert {
+  id          String      @id @default(cuid())
+  alertType   AlertType
+  severity    AlertSeverity
+  title       String
+  message     String      @db.Text
+
+  // Lien ket
+  entityType  String?     // Vehicle, Driver, Customer, etc.
+  entityId    String?
+
+  isRead      Boolean     @default(false)
+  isResolved  Boolean     @default(false)
+  resolvedAt  DateTime?
+  resolvedBy  String?
+
+  createdAt   DateTime    @default(now())
+}
+
+enum AlertType {
+  FUEL_OVERAGE      // Vuot dinh muc dau
+  PAYMENT_OVERDUE   // Cong no qua han
+  LICENSE_EXPIRY    // Het han bang lai
+  VEHICLE_MAINTENANCE // Can bao duong xe
+  LOW_INVENTORY     // Ton kho thap
+  GOAL_WARNING      // Canh bao muc tieu
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
 }

@@ -20,7 +20,7 @@ async function getPayables() {
     where: { status: { not: 'PAID' } },
     orderBy: { dueDate: 'asc' },
     include: {
-      supplier: { select: { id: true, companyName: true, phone: true } },
+      factory: { select: { id: true, name: true, phone: true } },
     },
   });
 }
@@ -150,7 +150,7 @@ export default async function PayablesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nhà cung cấp</TableHead>
+                <TableHead>Nhà máy</TableHead>
                 <TableHead>Ngày giao dịch</TableHead>
                 <TableHead>Hạn thanh toán</TableHead>
                 <TableHead className="text-right">Số tiền gốc</TableHead>
@@ -164,9 +164,9 @@ export default async function PayablesPage() {
               {payables.map((payable) => (
                 <TableRow key={payable.id}>
                   <TableCell>
-                    <span className="font-medium">{payable.supplier.companyName}</span>
-                    {payable.supplier.phone && (
-                      <div className="text-xs text-muted-foreground">{payable.supplier.phone}</div>
+                    <span className="font-medium">{payable.factory.name}</span>
+                    {payable.factory.phone && (
+                      <div className="text-xs text-muted-foreground">{payable.factory.phone}</div>
                     )}
                   </TableCell>
                   <TableCell>{formatDate(payable.transactionDate)}</TableCell>

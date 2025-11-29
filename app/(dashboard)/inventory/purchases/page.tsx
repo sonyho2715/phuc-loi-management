@@ -20,8 +20,9 @@ async function getPurchases() {
     orderBy: { purchaseDate: 'desc' },
     take: 100,
     include: {
-      supplier: { select: { companyName: true } },
+      factory: { select: { name: true } },
       cementType: { select: { code: true, name: true } },
+      vehicle: { select: { plateNumber: true } },
     },
   });
 }
@@ -88,7 +89,7 @@ export default async function PurchasesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Nhập hàng</h1>
           <p className="text-muted-foreground">
-            Quản lý các giao dịch nhập hàng từ nhà cung cấp
+            Quản lý các giao dịch nhập hàng từ nhà máy xi măng
           </p>
         </div>
         <Button asChild>
@@ -144,7 +145,7 @@ export default async function PurchasesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Ngày</TableHead>
-                <TableHead>Nhà cung cấp</TableHead>
+                <TableHead>Nhà máy</TableHead>
                 <TableHead>Loại xi măng</TableHead>
                 <TableHead className="text-right">Số lượng (tấn)</TableHead>
                 <TableHead className="text-right">Đơn giá</TableHead>
@@ -157,14 +158,14 @@ export default async function PurchasesPage() {
               {purchases.map((purchase) => (
                 <TableRow key={purchase.id}>
                   <TableCell>{formatDate(purchase.purchaseDate)}</TableCell>
-                  <TableCell className="font-medium">{purchase.supplier.companyName}</TableCell>
+                  <TableCell className="font-medium">{purchase.factory.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline">{purchase.cementType.code}</Badge>
                   </TableCell>
                   <TableCell className="text-right">{Number(purchase.quantity).toLocaleString('vi-VN')}</TableCell>
                   <TableCell className="text-right">{formatCurrency(Number(purchase.unitPrice))}</TableCell>
                   <TableCell className="text-right font-medium">{formatCurrency(Number(purchase.totalAmount))}</TableCell>
-                  <TableCell>{purchase.truckNumber || '-'}</TableCell>
+                  <TableCell>{purchase.vehicle?.plateNumber || '-'}</TableCell>
                   <TableCell>{getStatusBadge(purchase.paymentStatus)}</TableCell>
                 </TableRow>
               ))}

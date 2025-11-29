@@ -48,7 +48,7 @@ export const vi = {
   nav: {
     dashboard: 'Bảng điều khiển',
     customers: 'Khách hàng',
-    suppliers: 'Nhà cung cấp',
+    factories: 'Nhà máy',
     inventory: 'Kho hàng',
     purchases: 'Nhập hàng',
     sales: 'Xuất hàng',
@@ -107,10 +107,10 @@ export const vi = {
     interactions: 'Lịch sử tương tác',
     addInteraction: 'Thêm ghi chú',
   },
-  suppliers: {
-    title: 'Nhà cung cấp',
-    addNew: 'Thêm nhà cung cấp',
-    companyName: 'Tên nhà máy',
+  factories: {
+    title: 'Nhà máy xi măng',
+    addNew: 'Thêm nhà máy',
+    name: 'Tên nhà máy',
     contactPerson: 'Người liên hệ',
     cementBrands: 'Thương hiệu xi măng',
     totalPurchases: 'Tổng mua hàng',
