@@ -11,7 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Navigation, Truck, User, Factory, MapPin, Fuel, AlertTriangle } from 'lucide-react';
+import { Navigation, Truck, User, Factory, MapPin, Fuel, AlertTriangle, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { formatNumber } from '@/lib/formatters';
 
 interface PageProps {
@@ -210,11 +212,19 @@ export default async function TripsPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Quản lý chuyến hàng</h1>
-        <p className="text-muted-foreground">
-          Theo dõi các chuyến vận chuyển xi măng từ nhà máy đến khách hàng
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Quản lý chuyến hàng</h1>
+          <p className="text-muted-foreground">
+            Theo dõi các chuyến vận chuyển xi măng từ nhà máy đến khách hàng
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/trips/add">
+            <Plus className="mr-2 h-4 w-4" />
+            Tạo chuyến mới
+          </Link>
+        </Button>
       </div>
 
       <Suspense fallback={<div className="grid gap-4 md:grid-cols-5">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>}>

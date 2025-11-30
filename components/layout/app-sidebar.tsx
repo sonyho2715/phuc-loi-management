@@ -46,6 +46,8 @@ import {
   Target,
   Bell,
   Calculator,
+  Gauge,
+  ClipboardList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,12 +56,14 @@ const menuItems = [
     group: 'Tổng quan',
     items: [
       { title: 'Bảng điều khiển', href: '/', icon: LayoutDashboard },
+      { title: 'Nhập liệu hàng ngày', href: '/daily', icon: ClipboardList },
       { title: 'Mục tiêu', href: '/goals', icon: Target },
     ],
   },
   {
     group: 'Vận hành',
     items: [
+      { title: 'Điều khiển đội xe', href: '/fleet', icon: Gauge },
       { title: 'Xe cộ', href: '/vehicles', icon: Truck },
       { title: 'Lái xe', href: '/drivers', icon: UserCircle },
       { title: 'Tuyến đường', href: '/routes', icon: Route },

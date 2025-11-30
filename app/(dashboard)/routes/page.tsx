@@ -1,9 +1,11 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { getRoutes } from './actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Route, Factory, MapPin, Fuel, Banknote, Truck } from 'lucide-react';
+import { Route, Factory, MapPin, Fuel, Banknote, Truck, Plus } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface PageProps {
@@ -196,11 +198,19 @@ export default async function RoutesPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Quản lý tuyến đường</h1>
-        <p className="text-muted-foreground">
-          Các tuyến vận chuyển từ nhà máy đến khách hàng với định mức chi phí
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Quản lý tuyến đường</h1>
+          <p className="text-muted-foreground">
+            Các tuyến vận chuyển từ nhà máy đến khách hàng với định mức chi phí
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/routes/add">
+            <Plus className="mr-2 h-4 w-4" />
+            Thêm tuyến mới
+          </Link>
+        </Button>
       </div>
 
       <Suspense fallback={<div className="grid gap-4 md:grid-cols-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>}>

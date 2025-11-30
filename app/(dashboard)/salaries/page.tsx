@@ -11,8 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Calculator, User, TrendingUp, TrendingDown, Banknote, Fuel, AlertTriangle } from 'lucide-react';
-import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { Calculator, User, TrendingDown, Banknote, Fuel, AlertTriangle } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
+import { SalaryActions, SalaryRowActions, MonthYearSelector } from './SalaryActions';
 
 interface PageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
@@ -88,13 +89,13 @@ async function SalaryStats({ month, year }: { month?: number; year?: number }) {
   );
 }
 
-async function SalaryTable({ month, year }: { month?: number; year?: number }) {
+async function SalaryTable({ month, year }: { month: number; year: number }) {
   const salaries = await getDriverSalaries(month, year);
 
   if (salaries.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Không có dữ liệu lương
+        Không có dữ liệu lương. Bấm "Tính lương tất cả" để tạo bảng lương.
       </div>
     );
   }
@@ -114,6 +115,7 @@ async function SalaryTable({ month, year }: { month?: number; year?: number }) {
             <TableHead className="text-right">Đã ứng</TableHead>
             <TableHead className="text-right">Thực nhận</TableHead>
             <TableHead>Trạng thái</TableHead>
+            <TableHead className="text-center">Thao tác</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -158,6 +160,15 @@ async function SalaryTable({ month, year }: { month?: number; year?: number }) {
                   {statusConfig[salary.status]?.label}
                 </Badge>
               </TableCell>
+              <TableCell className="text-center">
+                <SalaryRowActions
+                  driverId={salary.driverId}
+                  driverName={salary.driverName}
+                  month={month}
+                  year={year}
+                  status={salary.status}
+                />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -178,12 +189,9 @@ function SalaryTableSkeleton() {
 
 export default async function SalariesPage({ searchParams }: PageProps) {
   const params = await searchParams;
-  const month = params.month ? parseInt(params.month) : undefined;
-  const year = params.year ? parseInt(params.year) : undefined;
-
   const currentDate = new Date();
-  const displayMonth = month || currentDate.getMonth() + 1;
-  const displayYear = year || currentDate.getFullYear();
+  const displayMonth = params.month ? parseInt(params.month) : currentDate.getMonth() + 1;
+  const displayYear = params.year ? parseInt(params.year) : currentDate.getFullYear();
 
   return (
     <div className="space-y-6">
@@ -194,28 +202,34 @@ export default async function SalariesPage({ searchParams }: PageProps) {
             Tháng {displayMonth}/{displayYear} - Tự động tính từ chuyến hàng
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
-            Lương = Cơ bản + Tiền chuyến + Tiền ăn - Vượt dầu - Ứng trước
-          </span>
+        <div className="flex items-center gap-4">
+          <MonthYearSelector currentMonth={displayMonth} currentYear={displayYear} />
+          <SalaryActions month={displayMonth} year={displayYear} />
         </div>
       </div>
 
       <Suspense fallback={<div className="grid gap-4 md:grid-cols-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>}>
-        <SalaryStats month={month} year={year} />
+        <SalaryStats month={displayMonth} year={displayYear} />
       </Suspense>
 
       <Card>
         <CardHeader>
-          <CardTitle>Chi tiết lương từng lái xe</CardTitle>
-          <CardDescription>
-            Lương được tự động tính từ số chuyến, định mức dầu và ứng trước
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Chi tiết lương từng lái xe</CardTitle>
+              <CardDescription>
+                Lương = Cơ bản + Tiền chuyến + Tiền ăn - Vượt dầu - Ứng trước
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Calculator className="h-4 w-4" />
+              <span>Quy trình: Nháp → Xác nhận → Thanh toán</span>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Suspense fallback={<SalaryTableSkeleton />}>
-            <SalaryTable month={month} year={year} />
+            <SalaryTable month={displayMonth} year={displayYear} />
           </Suspense>
         </CardContent>
       </Card>

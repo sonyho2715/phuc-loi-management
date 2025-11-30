@@ -1,9 +1,11 @@
 import { Suspense } from 'react';
+import Link from 'next/link';
 import { getDrivers } from './actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { UserCircle, Phone, Truck, Banknote, TrendingUp } from 'lucide-react';
+import { UserCircle, Phone, Truck, Banknote, TrendingUp, Plus } from 'lucide-react';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface PageProps {
@@ -205,11 +207,19 @@ export default async function DriversPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Quản lý lái xe</h1>
-        <p className="text-muted-foreground">
-          Theo dõi đội ngũ lái xe và thu nhập hàng tháng
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Quản lý lái xe</h1>
+          <p className="text-muted-foreground">
+            Theo dõi đội ngũ lái xe và thu nhập hàng tháng
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/drivers/add">
+            <Plus className="mr-2 h-4 w-4" />
+            Thêm lái xe
+          </Link>
+        </Button>
       </div>
 
       <Suspense fallback={<div className="grid gap-4 md:grid-cols-4">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}</div>}>

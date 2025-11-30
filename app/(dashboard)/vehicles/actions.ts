@@ -178,6 +178,160 @@ export async function updateVehicleStatus(id: string, status: 'ACTIVE' | 'MAINTE
   }
 }
 
+export async function createVehicle(data: {
+  plateNumber: string;
+  vehicleType: 'CEMENT_TRUCK' | 'DUMP_TRUCK' | 'CONTAINER';
+  capacity: number;
+  brand?: string;
+  model?: string;
+  yearMade?: number;
+  driverId?: string;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    // Check for duplicate plate number
+    const existing = await db.vehicle.findUnique({
+      where: { plateNumber: data.plateNumber },
+    });
+    if (existing) {
+      return { success: false, error: 'Biển số xe đã tồn tại' };
+    }
+
+    const vehicle = await db.vehicle.create({
+      data: {
+        plateNumber: data.plateNumber,
+        vehicleType: data.vehicleType,
+        capacity: data.capacity,
+        brand: data.brand || null,
+        model: data.model || null,
+        yearMade: data.yearMade || null,
+        driverId: data.driverId || null,
+        status: 'ACTIVE',
+        isActive: true,
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'CREATE',
+        entity: 'Vehicle',
+        entityId: vehicle.id,
+        details: { plateNumber: vehicle.plateNumber },
+      },
+    });
+
+    revalidatePath('/vehicles');
+    return { success: true, data: vehicle };
+  } catch (error) {
+    console.error('Create vehicle error:', error);
+    return { success: false, error: 'Không thể tạo xe mới' };
+  }
+}
+
+export async function updateVehicle(id: string, data: {
+  plateNumber?: string;
+  vehicleType?: 'CEMENT_TRUCK' | 'DUMP_TRUCK' | 'CONTAINER';
+  capacity?: number;
+  brand?: string;
+  model?: string;
+  yearMade?: number;
+  driverId?: string | null;
+  fuelLimit?: number | null;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const vehicle = await db.vehicle.update({
+      where: { id },
+      data: {
+        ...data,
+        driverId: data.driverId === null ? null : data.driverId,
+        fuelLimit: data.fuelLimit === null ? null : data.fuelLimit,
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'UPDATE',
+        entity: 'Vehicle',
+        entityId: vehicle.id,
+        details: { plateNumber: vehicle.plateNumber },
+      },
+    });
+
+    revalidatePath('/vehicles');
+    revalidatePath(`/vehicles/${id}`);
+    return { success: true, data: vehicle };
+  } catch (error) {
+    console.error('Update vehicle error:', error);
+    return { success: false, error: 'Không thể cập nhật xe' };
+  }
+}
+
+export async function getAvailableDrivers() {
+  const session = await auth();
+  if (!session) throw new Error('Unauthorized');
+
+  return db.driver.findMany({
+    where: {
+      status: 'ACTIVE',
+      isActive: true,
+    },
+    orderBy: { name: 'asc' },
+    select: { id: true, code: true, name: true, phone: true },
+  });
+}
+
+export async function addVehicleExpense(vehicleId: string, data: {
+  category: 'TIRE' | 'OIL' | 'BRAKE' | 'ENGINE' | 'BODY' | 'ELECTRIC' | 'INSPECTION' | 'INSURANCE' | 'OTHER';
+  amount: number;
+  description: string;
+  expenseDate?: Date;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const expense = await db.vehicleExpense.create({
+      data: {
+        vehicleId,
+        category: data.category,
+        amount: data.amount,
+        description: data.description,
+        expenseDate: data.expenseDate || new Date(),
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'CREATE',
+        entity: 'VehicleExpense',
+        entityId: expense.id,
+        details: { vehicleId, category: data.category, amount: data.amount },
+      },
+    });
+
+    revalidatePath('/vehicles');
+    revalidatePath(`/vehicles/${vehicleId}`);
+    return { success: true, data: expense };
+  } catch (error) {
+    console.error('Add vehicle expense error:', error);
+    return { success: false, error: 'Không thể thêm chi phí' };
+  }
+}
+
 export async function assignDriver(vehicleId: string, driverId: string | null) {
   const session = await auth();
   if (!session) {

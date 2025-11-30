@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth';
 import { db } from '@/lib/db';
 
@@ -92,4 +93,183 @@ export async function getRoute(id: string) {
   });
 
   return route;
+}
+
+export async function getRouteFormData() {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const [factories, customers] = await Promise.all([
+      db.factory.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, code: true },
+      }),
+      db.customer.findMany({
+        where: { isActive: true },
+        orderBy: { companyName: 'asc' },
+        select: { id: true, companyName: true, shortName: true },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: { factories, customers },
+    };
+  } catch (error) {
+    console.error('Get route form data error:', error);
+    return { success: false, error: 'Không thể tải dữ liệu' };
+  }
+}
+
+export async function createRoute(data: {
+  code: string;
+  name: string;
+  fromAddress?: string;
+  toAddress?: string;
+  distance?: number;
+  fuelAllowance: number;
+  driverPay: number;
+  mealAllowance: number;
+  tollFee: number;
+  factoryId?: string;
+  customerId?: string;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    // Check for duplicate code
+    const existing = await db.route.findUnique({
+      where: { code: data.code },
+    });
+    if (existing) {
+      return { success: false, error: 'Mã tuyến đường đã tồn tại' };
+    }
+
+    const route = await db.route.create({
+      data: {
+        code: data.code,
+        name: data.name,
+        fromAddress: data.fromAddress || null,
+        toAddress: data.toAddress || null,
+        distance: data.distance || null,
+        fuelAllowance: data.fuelAllowance,
+        driverPay: data.driverPay,
+        mealAllowance: data.mealAllowance,
+        tollFee: data.tollFee,
+        factoryId: data.factoryId || null,
+        customerId: data.customerId || null,
+        isActive: true,
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'CREATE',
+        entity: 'Route',
+        entityId: route.id,
+        details: { code: route.code, name: route.name },
+      },
+    });
+
+    revalidatePath('/routes');
+    return { success: true, data: route };
+  } catch (error) {
+    console.error('Create route error:', error);
+    return { success: false, error: 'Không thể tạo tuyến đường' };
+  }
+}
+
+export async function updateRoute(id: string, data: {
+  code?: string;
+  name?: string;
+  fromAddress?: string;
+  toAddress?: string;
+  distance?: number;
+  fuelAllowance?: number;
+  driverPay?: number;
+  mealAllowance?: number;
+  tollFee?: number;
+  factoryId?: string | null;
+  customerId?: string | null;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const route = await db.route.update({
+      where: { id },
+      data,
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'UPDATE',
+        entity: 'Route',
+        entityId: route.id,
+        details: { code: route.code, name: route.name },
+      },
+    });
+
+    revalidatePath('/routes');
+    revalidatePath(`/routes/${id}`);
+    return { success: true, data: route };
+  } catch (error) {
+    console.error('Update route error:', error);
+    return { success: false, error: 'Không thể cập nhật tuyến đường' };
+  }
+}
+
+export async function calibrateRoute(id: string, costs: {
+  fuelAllowance: number;
+  driverPay: number;
+  mealAllowance: number;
+  tollFee: number;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const route = await db.route.update({
+      where: { id },
+      data: {
+        fuelAllowance: costs.fuelAllowance,
+        driverPay: costs.driverPay,
+        mealAllowance: costs.mealAllowance,
+        tollFee: costs.tollFee,
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'UPDATE',
+        entity: 'Route',
+        entityId: route.id,
+        details: {
+          action: 'calibrate',
+          fuelAllowance: costs.fuelAllowance,
+          driverPay: costs.driverPay,
+        },
+      },
+    });
+
+    revalidatePath('/routes');
+    return { success: true, data: route };
+  } catch (error) {
+    console.error('Calibrate route error:', error);
+    return { success: false, error: 'Không thể cập nhật chi phí' };
+  }
 }

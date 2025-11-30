@@ -119,6 +119,59 @@ export async function getFuelStations() {
   });
 }
 
+export async function getFuelFormData() {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const [vehicles, fuelStations, recentTrips] = await Promise.all([
+      db.vehicle.findMany({
+        where: { status: 'ACTIVE', isActive: true },
+        orderBy: { plateNumber: 'asc' },
+        select: { id: true, plateNumber: true, vehicleType: true },
+      }),
+      db.fuelStation.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, address: true },
+      }),
+      db.trip.findMany({
+        where: {
+          status: { in: ['PENDING', 'IN_TRANSIT'] },
+        },
+        orderBy: { tripDate: 'desc' },
+        take: 20,
+        select: {
+          id: true,
+          tripCode: true,
+          vehicle: { select: { plateNumber: true } },
+          route: { select: { name: true, fuelAllowance: true } },
+        },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        vehicles,
+        fuelStations,
+        recentTrips: recentTrips.map(t => ({
+          id: t.id,
+          tripCode: t.tripCode,
+          vehiclePlate: t.vehicle.plateNumber,
+          routeName: t.route?.name || 'N/A',
+          fuelAllowance: t.route ? Number(t.route.fuelAllowance) : 0,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error('Get fuel form data error:', error);
+    return { success: false, error: 'Không thể tải dữ liệu' };
+  }
+}
+
 export async function createFuelTransaction(data: {
   vehicleId: string;
   fuelStationId: string;

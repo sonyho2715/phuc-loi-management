@@ -218,3 +218,137 @@ export async function approveAdvance(advanceId: string, approved: boolean) {
     return { success: false, error: 'Không thể duyệt ứng lương' };
   }
 }
+
+export async function createDriver(data: {
+  code: string;
+  name: string;
+  phone?: string;
+  idNumber?: string;
+  address?: string;
+  licenseNumber?: string;
+  licenseExpiry?: Date;
+  bankAccount?: string;
+  bankName?: string;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    // Check for duplicate code
+    const existing = await db.driver.findUnique({
+      where: { code: data.code },
+    });
+    if (existing) {
+      return { success: false, error: 'Mã lái xe đã tồn tại' };
+    }
+
+    const driver = await db.driver.create({
+      data: {
+        code: data.code,
+        name: data.name,
+        phone: data.phone || null,
+        idNumber: data.idNumber || null,
+        address: data.address || null,
+        licenseNumber: data.licenseNumber || null,
+        licenseExpiry: data.licenseExpiry || null,
+        bankAccount: data.bankAccount || null,
+        bankName: data.bankName || null,
+        status: 'ACTIVE',
+        isActive: true,
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'CREATE',
+        entity: 'Driver',
+        entityId: driver.id,
+        details: { code: driver.code, name: driver.name },
+      },
+    });
+
+    revalidatePath('/drivers');
+    return { success: true, data: driver };
+  } catch (error) {
+    console.error('Create driver error:', error);
+    return { success: false, error: 'Không thể tạo lái xe' };
+  }
+}
+
+export async function updateDriver(id: string, data: {
+  code?: string;
+  name?: string;
+  phone?: string;
+  idNumber?: string;
+  address?: string;
+  licenseNumber?: string;
+  licenseExpiry?: Date | null;
+  bankAccount?: string;
+  bankName?: string;
+  baseSalary?: number;
+}) {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const driver = await db.driver.update({
+      where: { id },
+      data: {
+        ...data,
+        licenseExpiry: data.licenseExpiry === null ? null : data.licenseExpiry,
+      },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'UPDATE',
+        entity: 'Driver',
+        entityId: driver.id,
+        details: { code: driver.code, name: driver.name },
+      },
+    });
+
+    revalidatePath('/drivers');
+    revalidatePath(`/drivers/${id}`);
+    return { success: true, data: driver };
+  } catch (error) {
+    console.error('Update driver error:', error);
+    return { success: false, error: 'Không thể cập nhật lái xe' };
+  }
+}
+
+export async function updateDriverStatus(id: string, status: 'ACTIVE' | 'ON_LEAVE' | 'TERMINATED') {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const driver = await db.driver.update({
+      where: { id },
+      data: { status },
+    });
+
+    await db.activity.create({
+      data: {
+        userId: session.user.id,
+        action: 'UPDATE',
+        entity: 'Driver',
+        entityId: driver.id,
+        details: { code: driver.code, status },
+      },
+    });
+
+    revalidatePath('/drivers');
+    return { success: true, data: driver };
+  } catch (error) {
+    console.error('Update driver status error:', error);
+    return { success: false, error: 'Không thể cập nhật trạng thái' };
+  }
+}

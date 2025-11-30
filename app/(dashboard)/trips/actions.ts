@@ -71,13 +71,84 @@ export async function getTrips(
   }));
 }
 
+export async function getDispatchData() {
+  const session = await auth();
+  if (!session) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  try {
+    const [vehicles, drivers, routes, cementTypes] = await Promise.all([
+      db.vehicle.findMany({
+        where: { status: 'ACTIVE' },
+        orderBy: { plateNumber: 'asc' },
+        include: {
+          driver: { select: { id: true, name: true } },
+        },
+      }),
+      db.driver.findMany({
+        where: { status: 'ACTIVE', isActive: true },
+        orderBy: { code: 'asc' },
+      }),
+      db.route.findMany({
+        where: { isActive: true },
+        orderBy: { code: 'asc' },
+      }),
+      db.cementType.findMany({
+        where: { isActive: true },
+        orderBy: { code: 'asc' },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        vehicles: vehicles.map(v => ({
+          id: v.id,
+          plateNumber: v.plateNumber,
+          vehicleType: v.vehicleType,
+          capacity: Number(v.capacity),
+          driver: v.driver,
+        })),
+        drivers: drivers.map(d => ({
+          id: d.id,
+          code: d.code,
+          name: d.name,
+          phone: d.phone,
+        })),
+        routes: routes.map(r => ({
+          id: r.id,
+          code: r.code,
+          name: r.name,
+          fromAddress: r.fromAddress,
+          toAddress: r.toAddress,
+          distance: Number(r.distance),
+          fuelAllowance: Number(r.fuelAllowance),
+          driverPay: Number(r.driverPay),
+          mealAllowance: Number(r.mealAllowance),
+          tollFee: Number(r.tollFee),
+        })),
+        cementTypes: cementTypes.map(c => ({
+          id: c.id,
+          code: c.code,
+          name: c.name,
+        })),
+      },
+    };
+  } catch (error) {
+    console.error('Get dispatch data error:', error);
+    return { success: false, error: 'Không thể tải dữ liệu' };
+  }
+}
+
 export async function createTrip(data: {
-  tripDate: Date;
   vehicleId: string;
   driverId: string;
   routeId: string;
   cementTypeId: string;
   quantity: number;
+  deliveryNote?: string;
+  notes?: string;
 }) {
   const session = await auth();
   if (!session) {
@@ -108,12 +179,14 @@ export async function createTrip(data: {
     const trip = await db.trip.create({
       data: {
         tripCode,
-        tripDate: data.tripDate,
+        tripDate: today,
         vehicleId: data.vehicleId,
         driverId: data.driverId,
         routeId: data.routeId,
         cementTypeId: data.cementTypeId,
         quantity: data.quantity,
+        deliveryNote: data.deliveryNote,
+        notes: data.notes,
         actualDriverPay: route?.driverPay,
         actualMeal: route?.mealAllowance,
         actualToll: route?.tollFee,
